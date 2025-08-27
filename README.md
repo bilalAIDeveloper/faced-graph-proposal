@@ -13,21 +13,7 @@
 
 ## 📁 File Structure
 
-### Option 1: Current Structure (Monolithic)
-```
-backend/CircleServer/functions/src/
-├── config/
-│   ├── facets.config.js          # Facet definitions & validation
-│   ├── missions.config.js         # Mission types & requirements  
-│   ├── onboarding.config.js       # Flow configuration
-│   └── state.config.js           # Enhanced existing config
-├── services/chat/
-│   └── chat.service.js           # Enhanced with onboarding detection
-└── prompts/chat/
-    └── unified.prompt.js         # Dynamic prompt generation
-```
-
-### Option 2: Modular Structure (Recommended)
+### Modular Structure
 ```
 backend/CircleServer/functions/src/
 ├── config/
