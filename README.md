@@ -158,12 +158,6 @@ module.exports = {
     shouldMatch: ['studyStyle', 'intent'],
     niceToHave: ['timezoneBand']
   },
-  // Role-specific information now included in missions
-  permissions: {
-    canFindStudyPartners: true,
-    canCollaborate: true,
-    canShareNotes: true
-  },
   questionTemplates: {
     step: "Which USMLE Step are you studying for?",
     studyStyle: "How do you prefer to study?",
