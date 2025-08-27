@@ -43,8 +43,7 @@ backend/CircleServer/functions/src/
 │   │   ├── tutor.mission.js      # Find tutor mission
 │   │   ├── student.mission.js    # Find student to teach mission
 │   │   └── resident.mission.js   # Find student to mentor mission
-│   ├── onboarding.config.js      # Flow configuration
-│   └── state.config.js           # Enhanced existing config
+│   └── state.config.js           # Complete integration layer
 ├── services/chat/
 │   └── chat.service.js           # Enhanced with onboarding detection
 └── prompts/chat/
@@ -303,13 +302,12 @@ module.exports = {
 
 ## 🔧 Configuration Files
 
-### **Enhanced `state.config.js` - Integration Layer**
+### **Enhanced `state.config.js` - Complete Integration Layer**
 
 ```javascript
 // Import modular facet and mission systems
 const { FACET_VALIDATORS, FACET_PACKS } = require('./facets/index.js');
 const { MISSIONS } = require('./missions/index.js');
-const { ONBOARDING_PHASES, CORE_FACETS_COLLECTION } = require('./onboarding.config.js');
 
 // Enhanced STAGES - Replace old 5-stage onboarding with 4 dynamic phases
 const STAGES = {
@@ -318,19 +316,37 @@ const STAGES = {
   // NEW: 4 distinct onboarding phases
   core_facets: {
     id: 'core_facets',
-    completionCriteria: { type: 'facet_based', requiredFacets: ['location', 'gender', 'commsPref'] }
+    completionCriteria: { type: 'facet_based', requiredFacets: ['location', 'gender', 'commsPref'] },
+    completionThreshold: 0.75,
+    nextPhase: 'mission_selection'
   },
   mission_selection: {
     id: 'mission_selection', 
-    completionCriteria: { type: 'mission_based', requiredAnswers: ['selectedMission'] }
+    completionCriteria: { type: 'mission_based', requiredAnswers: ['selectedMission'] },
+    completionThreshold: 1.0,
+    nextPhase: 'role_facets'
   },
   role_facets: {
     id: 'role_facets',
-    completionCriteria: { type: 'facet_based', requiredFacets: [] } // Dynamic based on mission
+    completionCriteria: { type: 'facet_based', requiredFacets: [] }, // Dynamic based on mission
+    completionThreshold: 0.7,
+    nextPhase: 'mission_overrides'
   },
   mission_overrides: {
     id: 'mission_overrides',
-    completionCriteria: { type: 'optional_based' } // Optional phase
+    completionCriteria: { type: 'optional_based' }, // Optional phase
+    completionThreshold: 0.5,
+    nextPhase: 'complete'
+  }
+};
+
+// Core facets collection configuration
+const CORE_FACETS_COLLECTION = {
+  collectionOrder: ['location', 'gender', 'commsPref', 'timezoneBand'],
+  questions: {
+    location: { text: "Where are you located?" },
+    gender: { text: "What's your gender?", options: ['female', 'male', 'non-binary'] },
+    commsPref: { text: "How do you prefer to communicate?", options: ['text', 'video', 'audio'] }
   }
 };
 
@@ -341,49 +357,35 @@ const DYNAMIC_QUESTIONS = {
       case 'core_facets': return generateCoreQuestions(userData);
       case 'mission_selection': return generateMissionQuestions(userData);
       case 'role_facets': return generateRoleQuestions(userData);
+      case 'mission_overrides': return generateMissionOverrideQuestions(userData);
       default: return [];
     }
   }
 };
 
-module.exports = { STAGES, DYNAMIC_QUESTIONS, COMPLETION_LOGIC };
-```
-
-### **`onboarding.config.js` - Flow Configuration**
-
-```javascript
-const ONBOARDING_PHASES = {
-  core_facets: {
-    id: 'core_facets',
-    requiredFacets: ['location', 'gender', 'commsPref'],
-    completionThreshold: 0.75,
-    nextPhase: 'mission_selection'
+// Completion logic for different phase types
+const COMPLETION_LOGIC = {
+  facet_based: (userData, requiredFacets) => {
+    const completed = requiredFacets.filter(facet => userData.facets[facet]);
+    return completed.length / requiredFacets.length;
   },
-  mission_selection: {
-    id: 'mission_selection',
-    requiredFacets: ['selectedMission'],
-    completionThreshold: 1.0,
-    nextPhase: 'role_facets'
+  mission_based: (userData, requiredAnswers) => {
+    return requiredAnswers.every(answer => userData[answer]) ? 1.0 : 0.0;
   },
-  role_facets: {
-    id: 'role_facets',
-    requiredFacets: [], // Dynamic based on mission
-    completionThreshold: 0.7,
-    nextPhase: 'mission_overrides'
+  optional_based: (userData) => {
+    return 0.5; // Optional phase always considered partially complete
   }
 };
 
-const CORE_FACETS_COLLECTION = {
-  collectionOrder: ['location', 'gender', 'commsPref', 'timezoneBand'],
-  questions: {
-    location: { text: "Where are you located?" },
-    gender: { text: "What's your gender?", options: ['female', 'male', 'non-binary'] },
-    commsPref: { text: "How do you prefer to communicate?", options: ['text', 'video', 'audio'] }
-  }
+module.exports = { 
+  STAGES, 
+  DYNAMIC_QUESTIONS, 
+  COMPLETION_LOGIC, 
+  CORE_FACETS_COLLECTION 
 };
-
-module.exports = { ONBOARDING_PHASES, CORE_FACETS_COLLECTION };
 ```
+
+
 
 ---
 
