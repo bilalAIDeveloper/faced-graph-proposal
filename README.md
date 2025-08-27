@@ -13,7 +13,7 @@
 
 ## 📁 File Structure
 
-### Modular Structure
+###  Modular Structure
 ```
 backend/CircleServer/functions/src/
 ├── config/
@@ -363,11 +363,76 @@ const COMPLETION_LOGIC = {
   }
 };
 
+// Mission dependencies and facet relationships
+const MISSION_DEPENDENCIES = {
+  // Core facet dependencies (must be collected first)
+  core: {
+    location: [],
+    gender: [],
+    commsPref: [],
+    timezoneBand: ['location'] // Requires location to be set first
+  },
+  
+  // Student role dependencies
+  student: {
+    step: [],
+    studyStyle: ['step'], // Study style depends on which step
+    studyHours: ['step'], // Study hours depend on step
+    intent: ['step'], // Intent depends on step
+    budget: ['step'] // Budget depends on step
+  },
+  
+  // Tutor role dependencies
+  tutor: {
+    stepsTaught: [],
+    specialties: ['stepsTaught'], // Specialties depend on steps taught
+    experienceYrs: ['stepsTaught'], // Experience depends on steps taught
+    ratesBand: ['experienceYrs'], // Rates depend on experience
+    teachingStyle: ['stepsTaught'] // Teaching style depends on steps taught
+  },
+  
+  // Resident role dependencies
+  resident: {
+    specialty: [],
+    pgy: ['specialty'], // PGY depends on specialty
+    mentoring: ['specialty', 'pgy'], // Mentoring depends on specialty and PGY
+    availabilityBands: ['specialty'] // Availability depends on specialty
+  }
+};
+
+// Dependency resolution functions
+const DEPENDENCY_LOGIC = {
+  // Check if a facet's dependencies are met
+  canAskFacet: (facet, facetType, userData) => {
+    const dependencies = MISSION_DEPENDENCIES[facetType]?.[facet] || [];
+    return dependencies.every(dep => userData.facets[dep]);
+  },
+  
+  // Get next available facet based on dependencies
+  getNextAvailableFacet: (facets, facetType, userData) => {
+    return facets.find(facet => DEPENDENCY_LOGIC.canAskFacet(facet, facetType, userData));
+  },
+  
+  // Sort facets by dependency order
+  sortByDependencies: (facets, facetType) => {
+    const dependencyGraph = MISSION_DEPENDENCIES[facetType] || {};
+    return facets.sort((a, b) => {
+      const aDeps = dependencyGraph[a] || [];
+      const bDeps = dependencyGraph[b] || [];
+      if (aDeps.includes(b)) return 1; // b must come before a
+      if (bDeps.includes(a)) return -1; // a must come before b
+      return 0; // no dependency relationship
+    });
+  }
+};
+
 module.exports = { 
   STAGES, 
   DYNAMIC_QUESTIONS, 
   COMPLETION_LOGIC, 
-  CORE_FACETS_COLLECTION 
+  CORE_FACETS_COLLECTION,
+  MISSION_DEPENDENCIES,
+  DEPENDENCY_LOGIC
 };
 ```
 
